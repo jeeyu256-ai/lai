@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>法衡 · Figma 导出快照（欢迎页 + 对话页）</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   Design Tokens —— 绿色通透风格（参考 ThinkAI）
+   ============================================================ */
+:root{
+  /* 品牌绿 */
+  --green:        #22c55e;
+  --green-mid:    #4ade80;
+  --green-light:  #a7f3d0;
+  --green-deep:   #15803d;
+  --green-soft:   #eef8f0;   /* 用户气泡 / 提示卡底 */
+  --green-tint:   #f5fbf6;
+  --green-line:   #dcefe1;
+
+  /* 中性 */
+  --bg:       #f2f3f5;       /* 舞台底（参考图浅灰） */
+  --surface:  #ffffff;
+  --ink:      #171a17;
+  --ink-2:    #3d443e;
+  --muted:    #8b948d;
+  --line:     #e6ebe7;
+  --line-soft:#f0f3f0;
+
+  --font: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+
+  --fs-xxs:10px; --fs-xs:11px; --fs-sm:12px; --fs-base:13px;
+  --fs-md:15px; --fs-lg:18px; --fs-xl:22px;
+
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:20px; --sp-6:24px; --sp-8:36px;
+
+  --r-sm:10px; --r-md:14px; --r-lg:18px; --r-xl:24px; --r-pill:999px;
+
+  --sh-card:  0 1px 2px rgba(24,40,28,.04);
+  --sh-orb:   inset -7px -11px 18px rgba(12,90,45,.16), inset 5px 7px 14px rgba(255,255,255,.6), 0 10px 22px rgba(34,197,94,.26);
+
+  --ease: cubic-bezier(.16,1,.3,1);
+  --dur-fast:160ms; --dur-base:320ms; --dur-slow:560ms;
+}
+
+/* ============================================================
+   Base
+   ============================================================ */
+*,*::before,*::after{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html,body{ margin:0; padding:0; }
+body{
+  font-family:var(--font); color:var(--ink); background:var(--bg);
+  min-height:100vh; -webkit-font-smoothing:antialiased;
+}
+button,input,textarea{ font:inherit; color:inherit; }
+button{ cursor:pointer; border:none; background:none; padding:0; }
+:focus-visible{ outline:2px solid var(--green-deep); outline-offset:2px; border-radius:6px; }
+::selection{ background:var(--green-light); color:var(--green-deep); }
+.scroll{ overflow-y:auto; scrollbar-width:none; }
+.scroll::-webkit-scrollbar{ display:none; }
+
+/* ============================================================
+   页面舞台（全屏真实形态）
+   ============================================================ */
+.stage{ min-height:100vh; min-height:100dvh; width:100%; }
+.phone{ position:relative; width:100%; min-height:100vh; min-height:100dvh; }
+.screen{
+  position:relative; min-height:100vh; min-height:100dvh; overflow:hidden;
+  background:transparent; display:flex; flex-direction:column;
+}
+/* 顶部淡绿青晕染（参考图核心氛围） */
+.screen::before{
+  content:""; position:absolute; inset:0 0 auto 0; height:64%; pointer-events:none; z-index:0;
+  background:radial-gradient(112% 62% at 50% -6%, rgba(167,243,208,.62), rgba(220,252,231,.34) 40%, rgba(255,255,255,0) 76%);
+}
+.is-chat .screen::before{ height:48%; opacity:.62; }
+/* 对话页有独立顶栏，隐藏共用顶栏 */
+.is-chat .topbar{ display:none; }
+
+
+/* ============================================================
+   顶部栏：小 logo + 法衡 / 圆形头像
+   ============================================================ */
+.topbar{
+  flex:none; height:46px; width:100%; max-width:520px; margin-inline:auto; padding:0 18px; position:relative; z-index:4;
+  display:flex; align-items:center; justify-content:space-between;
+}
+.round-btn{
+  width:36px; height:36px; border-radius:50%; display:grid; place-items:center;
+  background:rgba(255,255,255,.82); border:1px solid var(--line);
+  box-shadow:0 2px 8px rgba(24,40,28,.05); color:var(--ink-2);
+  transition:background var(--dur-fast), transform var(--dur-fast), color var(--dur-fast);
+}
+.round-btn:hover{ background:#fff; }
+.round-btn:active{ transform:scale(.92); }
+.round-btn svg{ width:17px; height:17px; }
+.round-btn.avatar-btn{ background:var(--green-soft); color:var(--green-deep); border-color:var(--green-line); font-size:var(--fs-sm); font-weight:600; }
+.round-btn.is-active{ background:var(--green); color:#fff; border-color:var(--green); }
+.top-actions{ display:flex; align-items:center; gap:8px; }
+
+/* 头像下拉菜单 */
+.menu{
+  position:absolute; right:16px; top:44px; z-index:12;
+  width:158px; background:var(--surface); border:1px solid var(--line);
+  border-radius:var(--r-md); box-shadow:0 12px 34px rgba(24,40,28,.16);
+  padding:6px; opacity:0; transform:translateY(-6px) scale(.97);
+  pointer-events:none; transition:all var(--dur-base) var(--ease);
+}
+.menu.open{ opacity:1; transform:none; pointer-events:auto; }
+.menu button{
+  display:flex; align-items:center; gap:10px; width:100%;
+  padding:10px; border-radius:10px; text-align:left; font-size:var(--fs-base);
+  color:var(--ink-2); transition:background var(--dur-fast), color var(--dur-fast);
+}
+.menu button:hover{ background:var(--green-soft); color:var(--green-deep); }
+.menu button svg{ width:17px; height:17px; color:var(--green-deep); }
+
+/* ============================================================
+   视图容器
+   ============================================================ */
+.body{ position:relative; flex:1; min-height:0; z-index:1; display:flex; flex-direction:column; }
+.view{ display:none; flex:1; min-height:0; flex-direction:column; width:100%; max-width:520px; margin-inline:auto; }
+.view.active{ display:flex; animation:viewIn var(--dur-base) var(--ease) both; }
+@keyframes viewIn{ from{ opacity:0; transform:translateY(6px); } to{ opacity:1; transform:none; } }
+
+/* ============================================================
+   欢迎页
+   ============================================================ */
+.welcome{ padding:0 20px 0; }
+.hero{ padding-top:34px; text-align:center; position:relative; }
+/* 球体柔光：参考图的悬浮发光氛围 */
+.hero::before{
+  content:""; position:absolute; left:50%; top:26px; width:250px; height:250px;
+  transform:translateX(-50%); pointer-events:none; z-index:0;
+  background:radial-gradient(circle, rgba(74,222,128,.22) 0%, rgba(134,239,172,.11) 42%, rgba(255,255,255,0) 70%);
+}
+/* 3D 吉祥物容器：WebGL 就绪后淡入 canvas */
+.mascot-wrap{ width:116px; height:116px; margin:0 auto 18px; position:relative; animation:float 5s ease-in-out infinite; z-index:1; }
+.mascot-host{ position:absolute; inset:0; z-index:2; transition:opacity var(--dur-base); }
+.mascot-fallback{
+  position:absolute; left:12%; top:12%; width:76%; height:76%; border-radius:50%;
+  background:linear-gradient(158deg,#4ade80,#86efac 42%,#d1fae5 78%,#f0fdf4);
+  box-shadow:var(--sh-orb); z-index:1; transition:opacity var(--dur-base);
+}
+.mascot-fallback::after{
+  content:""; position:absolute; left:28%; top:34%; width:9%; height:15%; border-radius:50%; background:#0c3527;
+  box-shadow:22px 0 0 #0c3527;
+}
+.mascot-wrap.gl-ready .mascot-fallback{ opacity:0; }
+@keyframes float{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-8px); } }
+@media (prefers-reduced-motion: reduce){ .mascot-wrap{ animation:none; } }
+
+.title{ margin:0; font-size:23px; line-height:1.3; font-weight:700; letter-spacing:-.03em; color:var(--ink); position:relative; z-index:1; }
+.subtitle{ margin:9px 0 0; font-size:13px; line-height:1.6; color:var(--muted); position:relative; z-index:1; }
+
+/* 三张功能快捷卡 */
+.features{ margin-top:30px; display:grid; grid-template-columns:repeat(3,1fr); gap:9px; }
+.feature{
+  min-height:98px; padding:12px 10px; text-align:left;
+  background:rgba(255,255,255,.8); border:1px solid var(--line);
+  border-radius:14px; box-shadow:var(--sh-card);
+  display:flex; flex-direction:column; gap:9px;
+  transition:transform var(--dur-base) var(--ease), border-color var(--dur-base), background var(--dur-base), box-shadow var(--dur-base);
+}
+.feature:hover{ transform:translateY(-3px); border-color:var(--green-mid); background:#fff; box-shadow:0 8px 20px rgba(34,197,94,.13); }
+.feature:active{ transform:translateY(-1px) scale(.98); }
+.feature-ic{ width:27px; height:27px; border-radius:8px; display:grid; place-items:center; flex:none; }
+.feature-ic svg{ width:15px; height:15px; }
+.ic-green{ background:#dcfce7; color:#15803d; }
+.ic-blue{ background:#dbeafe; color:#2563eb; }
+.ic-rose{ background:#ffe4e6; color:#e11d48; }
+.feature b{ display:block; font-size:12px; font-weight:600; color:var(--ink); line-height:1.3; }
+.feature small{ display:block; margin-top:3px; font-size:10px; line-height:1.45; color:var(--muted); }
+
+/* 升级提示条 */
+.upgrade{
+  flex:none; display:flex; align-items:center; gap:10px; margin-top:14px;
+  padding:9px 11px; background:rgba(255,255,255,.8); border:1px solid var(--line);
+  border-radius:14px; box-shadow:var(--sh-card);
+}
+.upgrade-ic{
+  width:27px; height:27px; border-radius:8px; flex:none; display:grid; place-items:center;
+  background:linear-gradient(140deg,#22c55e,#86efac); color:#fff;
+  box-shadow:0 2px 8px rgba(34,197,94,.3);
+}
+.upgrade-ic svg{ width:14px; height:14px; }
+.upgrade-txt{ flex:1; min-width:0; }
+.upgrade-txt b{ display:block; font-size:12px; font-weight:600; color:var(--ink); }
+.upgrade-txt small{ display:block; font-size:10px; color:var(--muted); margin-top:1px; }
+.upgrade-x{ width:22px; height:22px; border-radius:7px; display:grid; place-items:center; color:var(--muted); flex:none; }
+.upgrade-x:hover{ background:var(--green-soft); color:var(--green-deep); }
+.upgrade-x svg{ width:13px; height:13px; }
+
+.spacer{ flex:1; min-height:18px; }
+
+/* 底部输入框（欢迎页 / 对话页共用） */
+.composer{
+  flex:none; margin-bottom:8px;
+  border:1px solid var(--line); border-radius:var(--r-lg);
+  background:var(--surface); box-shadow:0 2px 14px rgba(24,40,28,.05);
+  padding:12px 13px 10px;
+  transition:border-color var(--dur-base), box-shadow var(--dur-base);
+}
+.composer:focus-within{ border-color:var(--green-mid); box-shadow:0 0 0 3px rgba(74,222,128,.14), 0 2px 14px rgba(24,40,28,.05); }
+.composer textarea{
+  width:100%; min-height:34px; max-height:96px; resize:none; border:none; outline:none;
+  background:transparent; font-size:var(--fs-base); line-height:1.6; color:var(--ink); padding:2px 2px 0;
+}
+.composer textarea::placeholder{ color:#a8b0a9; }
+.composer input{
+  width:100%; height:30px; border:none; outline:none; background:transparent;
+  font-size:var(--fs-base); color:var(--ink);
+}
+.composer input::placeholder{ color:#a8b0a9; }
+.composer-bar{ display:flex; align-items:center; justify-content:space-between; margin-top:6px; }
+.mode-pill{
+  display:flex; align-items:center; gap:5px; height:26px; padding:0 9px;
+  border-radius:var(--r-pill); background:var(--green-soft); color:var(--green-deep);
+  font-size:var(--fs-xxs); font-weight:500; transition:background var(--dur-fast);
+}
+.mode-pill:hover{ background:var(--green-line); }
+.mode-pill svg{ width:11px; height:11px; }
+.cmp-icons{ display:flex; gap:2px; align-items:center; }
+.ic-btn{ width:30px; height:30px; border-radius:9px; display:grid; place-items:center; color:var(--muted); transition:background var(--dur-fast), color var(--dur-fast); }
+.ic-btn:hover{ background:var(--green-soft); color:var(--green-deep); }
+.ic-btn svg{ width:17px; height:17px; }
+.send-btn{
+  width:34px; height:34px; border-radius:11px; display:grid; place-items:center;
+  background:var(--green); color:#fff; box-shadow:0 3px 10px rgba(34,197,94,.32);
+  transition:transform var(--dur-fast), opacity var(--dur-fast);
+}
+.send-btn:hover{ transform:translateY(-2px); }
+.send-btn:active{ transform:scale(.9); }
+.send-btn:disabled{ opacity:.4; box-shadow:none; cursor:not-allowed; transform:none; }
+.send-btn svg{ width:16px; height:16px; }
+.disclaimer{ flex:none; text-align:center; font-size:var(--fs-xxs); color:#a8b0a9; padding:2px 0 8px; }
+
+/* ============================================================
+   对话页
+   ============================================================ */
+.chat-top{
+  flex:none; display:flex; align-items:center; gap:8px;
+  padding:2px 18px 10px; position:relative; z-index:3;
+}
+.back-btn{ width:28px; height:28px; display:grid; place-items:center; color:var(--ink-2); border-radius:8px; transition:background var(--dur-fast); }
+.back-btn:hover{ background:var(--green-soft); }
+.back-btn svg{ width:18px; height:18px; }
+.chat-title{ font-size:var(--fs-base); font-weight:600; }
+.chat-status{ font-size:var(--fs-xxs); color:var(--green-deep); display:flex; align-items:center; gap:5px; margin-top:2px; }
+.chat-status::before{ content:""; width:5px; height:5px; border-radius:50%; background:var(--green); }
+
+.msgs{ flex:1; padding:6px 18px 4px; display:flex; flex-direction:column; gap:14px; }
+.msg{ display:flex; gap:8px; align-items:flex-start; max-width:100%; animation:msgIn var(--dur-base) var(--ease) both; }
+@keyframes msgIn{ from{ opacity:0; transform:translateY(8px); } to{ opacity:1; transform:none; } }
+.msg.user{ flex-direction:row-reverse; }
+.msg-orb{
+  flex:none; width:26px; height:26px; border-radius:50%; margin-top:2px;
+  background:linear-gradient(158deg,#4ade80,#a7f3d0 70%,#f0fdf4);
+  box-shadow:inset -3px -4px 7px rgba(12,90,45,.14), inset 2px 3px 6px rgba(255,255,255,.7);
+}
+.msg.user .msg-orb{ background:#e8ede8; box-shadow:none; }
+.bubble{
+  max-width:calc(100% - 36px); padding:11px 13px;
+  font-size:var(--fs-base); line-height:1.68; color:var(--ink-2);
+  background:var(--surface); border:1px solid var(--line);
+  border-radius:5px var(--r-md) var(--r-md) var(--r-md);
+  box-shadow:var(--sh-card);
+}
+.msg.user .bubble{
+  background:var(--green-soft); border-color:var(--green-line); color:var(--ink);
+  border-radius:var(--r-md) 5px var(--r-md) var(--r-md);
+}
+.bubble p{ margin:0 0 9px; } .bubble p:last-child{ margin-bottom:0; }
+
+/* AI 结构化回答 */
+.answer .lead-p{ color:var(--ink-2); }
+.verdict{
+  background:var(--green-soft); border-left:2px solid var(--green);
+  border-radius:0 var(--r-sm) var(--r-sm) 0; padding:9px 11px; margin:10px 0;
+  font-size:var(--fs-xs); line-height:1.7; color:#2f5c3c;
+}
+.verdict b{ color:var(--green-deep); }
+.answer h4{ margin:13px 0 7px; font-size:var(--fs-base); font-weight:600; color:var(--ink); display:flex; align-items:center; gap:6px; }
+.answer h4::before{ content:""; width:2px; height:12px; border-radius:2px; background:var(--green); }
+.steps{ margin:0; padding-left:17px; }
+.steps li{ margin-bottom:5px; line-height:1.65; }
+.steps li::marker{ color:var(--green-deep); font-weight:700; }
+.law-ref{ margin-top:11px; background:var(--green-tint); border:1px solid var(--green-line); border-radius:var(--r-sm); padding:9px 11px; font-size:var(--fs-xxs); color:var(--ink-2); line-height:1.65; }
+.law-ref .lbl{ display:flex; align-items:center; gap:5px; color:var(--green-deep); font-weight:700; margin-bottom:3px; }
+.law-ref .lbl svg{ width:12px; height:12px; }
+.follow{ margin-top:11px; padding-top:9px; border-top:1px dashed var(--line); font-size:var(--fs-xs); color:var(--muted); }
+.follow b{ color:var(--green-deep); }
+.typing{ display:flex; gap:4px; padding:13px !important; }
+.typing i{ width:5px; height:5px; border-radius:50%; background:var(--green-light); animation:blink 1.2s infinite; }
+.typing i:nth-child(2){ animation-delay:.2s } .typing i:nth-child(3){ animation-delay:.4s }
+@keyframes blink{ 0%,60%,100%{ opacity:.35; transform:translateY(0) } 30%{ opacity:1; transform:translateY(-3px) } }
+
+.chat-compose{ flex:none; padding:6px 16px 0; }
+.chat-note{ flex:none; text-align:center; font-size:var(--fs-xxs); color:#a8b0a9; padding:6px 0 8px; }
+
+/* ============================================================
+   功能面板（咨询记录 / 法律工具 / 我的）—— 覆盖层
+   ============================================================ */
+.sheet{
+  position:absolute; inset:0; z-index:20; background:var(--surface);
+  display:flex; flex-direction:column; transform:translateY(100%);
+  transition:transform var(--dur-base) var(--ease); pointer-events:none;
+}
+.sheet.open{ transform:none; pointer-events:auto; }
+.sheet-head{ flex:none; height:56px; padding:0 18px; display:flex; align-items:center; gap:10px; border-bottom:1px solid var(--line-soft); }
+.sheet-head h3{ flex:1; margin:0; font-size:var(--fs-md); font-weight:600; }
+.sheet-body{ flex:1; padding:16px 18px 24px; }
+.sheet-day{ font-size:var(--fs-xxs); color:var(--muted); margin:4px 2px 10px; letter-spacing:.06em; }
+.h-item{
+  display:flex; align-items:center; gap:11px; width:100%; text-align:left;
+  padding:12px; border-radius:var(--r-md); border:1px solid var(--line);
+  margin-bottom:9px; transition:border-color var(--dur-fast), background var(--dur-fast);
+}
+.h-item:hover{ border-color:var(--green-mid); background:var(--green-tint); }
+.h-ic{ flex:none; width:30px; height:30px; border-radius:9px; background:var(--green-soft); color:var(--green-deep); display:grid; place-items:center; }
+.h-ic svg{ width:15px; height:15px; }
+.h-main{ flex:1; min-width:0; }
+.h-main b{ display:block; font-size:var(--fs-base); font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.h-main span{ display:block; font-size:var(--fs-xxs); color:var(--muted); margin-top:2px; }
+.h-time{ flex:none; font-size:var(--fs-xxs); color:#a8b0a9; }
+
+.tool-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.tool-card{
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--r-md);
+  padding:14px 12px; text-align:left; min-height:116px; display:flex; flex-direction:column; gap:9px;
+  transition:transform var(--dur-base) var(--ease), border-color var(--dur-base), box-shadow var(--dur-base);
+}
+.tool-card:hover{ transform:translateY(-3px); border-color:var(--green-mid); box-shadow:0 6px 16px rgba(34,197,94,.12); }
+.tool-ic-box{ width:34px; height:34px; border-radius:10px; background:var(--green-soft); color:var(--green-deep); display:grid; place-items:center; }
+.tool-ic-box svg{ width:19px; height:19px; }
+.tool-card h4{ margin:0; font-size:var(--fs-base); font-weight:600; }
+.tool-card p{ margin:0; font-size:var(--fs-xxs); color:var(--muted); line-height:1.5; }
+
+.me-card{ display:flex; align-items:center; gap:13px; padding:4px 2px 18px; }
+.me-avatar{ width:54px; height:54px; border-radius:18px; background:linear-gradient(145deg,#4ade80,#16a34a); color:#fff; display:grid; place-items:center; font-size:var(--fs-lg); font-weight:600; box-shadow:0 6px 16px rgba(34,197,94,.28); }
+.me-card b{ font-size:var(--fs-md); }
+.me-card p{ margin:3px 0 0; font-size:var(--fs-xs); color:var(--muted); }
+.me-stats{ display:flex; gap:9px; margin-bottom:18px; }
+.me-stat{ flex:1; text-align:center; padding:12px 4px; border:1px solid var(--line); border-radius:var(--r-md); }
+.me-stat b{ display:block; font-size:var(--fs-lg); color:var(--green-deep); font-variant-numeric:tabular-nums; }
+.me-stat span{ font-size:var(--fs-xxs); color:var(--muted); }
+.menu-card{ border:1px solid var(--line); border-radius:var(--r-md); overflow:hidden; }
+.menu-row{ display:flex; align-items:center; gap:11px; width:100%; padding:13px 14px; border-bottom:1px solid var(--line-soft); text-align:left; transition:background var(--dur-fast); }
+.menu-row:last-child{ border-bottom:none; }
+.menu-row:hover{ background:var(--green-tint); }
+.menu-row .mi{ color:var(--green-deep); display:grid; place-items:center; width:18px; }
+.menu-row .mi svg{ width:17px; height:17px; }
+.menu-row span{ flex:1; font-size:var(--fs-base); color:var(--ink-2); }
+.menu-row .arrow{ color:#c2cbc3; }
+.menu-row .arrow svg{ width:14px; height:14px; }
+
+/* Home indicator */
+
+/* 入场错峰 */
+.rise{ opacity:0; transform:translateY(12px); }
+.view.active .rise{ animation:riseIn var(--dur-slow) var(--ease) both; }
+.view.active .rise:nth-child(1){ animation-delay:.02s }
+.view.active .rise:nth-child(2){ animation-delay:.09s }
+.view.active .rise:nth-child(3){ animation-delay:.16s }
+.view.active .rise:nth-child(4){ animation-delay:.23s }
+.view.active .rise:nth-child(5){ animation-delay:.30s }
+@keyframes riseIn{ to{ opacity:1; transform:none } }
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{ animation:none !important; transition:none !important; }
+  .rise{ opacity:1; transform:none }
+}
+
+</style>
+<style>
+/* ============ Figma 导出专用覆盖样式 ============ */
+html,body{ background:#e9eee9 !important; }
+*,*::before,*::after{ animation:none !important; transition:none !important; }
+.rise{ opacity:1 !important; transform:none !important; }
+.figma-stage{ display:flex; gap:44px; padding:40px; align-items:flex-start; flex-wrap:nowrap; }
+.figma-stage .phone{
+  width:390px; height:844px; flex:none; background:#fff; border-radius:34px;
+  overflow:hidden; box-shadow:0 18px 50px rgba(24,40,28,.14); position:relative;
+}
+.figma-stage .screen{ height:100%; background:#fbfdfb; }
+/* 可编辑 SVG 吉祥物 */
+.mascot-svg{ width:116px; height:116px; display:block; }
+.mascot-glow{
+  position:absolute; left:50%; top:26px; width:250px; height:250px; transform:translateX(-50%);
+  background:radial-gradient(circle, rgba(74,222,128,.22) 0%, rgba(134,239,172,.11) 42%, rgba(255,255,255,0) 70%);
+  pointer-events:none;
+}
+/* 对话页：禁用隐藏共享顶栏规则失效时不显示 */
+.figma-stage .chat-top{ display:flex !important; }
+/* 预置对话滚动区内不需要滚动 */
+.figma-stage .msgs{ overflow:visible; }
+.figma-label{
+  position:absolute; top:-30px; left:2px; font:600 14px/1 -apple-system,"PingFang SC",sans-serif; color:#4b5563; letter-spacing:.02em;
+}
+</style>
+
+</head>
+<body>
+<div class="figma-stage">
+<div class="phone">
+  <span class="figma-label">01 · 欢迎页 / Welcome</span>
+  <div class="screen">
+    <div class="topbar">
+      <button class="round-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+      <div class="top-actions">
+        <button class="round-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v18M8 7v10M16 7v10M4 10v4M20 10v4"/></svg></button>
+        <button class="round-btn avatar-btn">星</button>
+      </div>
+    </div>
+    <div class="body">
+      <section class="view welcome active">
+        <div class="hero">
+          <div class="mascot-wrap rise" style="animation:none">
+  <div class="mascot-glow"></div>
+  <svg class="mascot-svg" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="bodyG" x1="0.2" y1="0.1" x2="0.8" y2="1">
+        <stop offset="0" stop-color="#6ee7a0"/><stop offset="0.5" stop-color="#34d17e"/><stop offset="1" stop-color="#16a34a"/>
+      </linearGradient>
+      <radialGradient id="hiG" cx="0.34" cy="0.28" r="0.5">
+        <stop offset="0" stop-color="#ffffff" stop-opacity="0.75"/><stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+    <path d="M60 14c26 0 44 19 44 44 0 24-18 44-44 44S16 82 16 58c0-25 18-44 44-44Z" fill="url(#bodyG)"/>
+    <ellipse cx="48" cy="40" rx="26" ry="20" fill="url(#hiG)" transform="rotate(-24 48 40)"/>
+    <ellipse cx="60" cy="99" rx="30" ry="8" fill="#0e7a43" opacity="0.28"/>
+    <ellipse cx="46" cy="56" rx="5.2" ry="8" fill="#0c3527"/>
+    <ellipse cx="74" cy="56" rx="5.2" ry="8" fill="#0c3527"/>
+  </svg>
+</div>
+          <h1 class="title rise">下午好，星火</h1>
+          <p class="subtitle rise">我可以帮你审查合同、检索法条或起草法律文书</p>
+        </div>
+        <div class="features rise">
+          <button class="feature"><span class="feature-ic ic-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6Z"/><path d="M14 3v6h6"/><path d="m9 15 2 2 4-4"/></svg></span><span><b>合同审查</b><small>识别风险条款</small></span></button>
+          <button class="feature"><span class="feature-ic ic-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2V5Zm0 14a2 2 0 0 1 2-2h13"/><path d="M8 7h7M8 11h5"/></svg></span><span><b>法条检索</b><small>精准查询法规</small></span></button>
+          <button class="feature"><span class="feature-ic ic-rose"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 20h9M4 20h4l10-10-4-4L4 16v4Z"/><path d="m13 6 4 4"/></svg></span><span><b>文书生成</b><small>用模板快速起草</small></span></button>
+        </div>
+        <div class="upgrade rise">
+          <span class="upgrade-ic"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 9.4 9.4 2 12l7.4 2.6L12 22l2.6-7.4L22 12l-7.4-2.6L12 2Z"/></svg></span>
+          <span class="upgrade-txt"><b>升级专业版</b><small>解锁更多咨询额度与文书模板</small></span>
+          <button class="upgrade-x"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+        </div>
+        <div class="spacer"></div>
+        <div class="composer rise">
+          <textarea rows="2" placeholder="问我任何法律问题…"></textarea>
+          <div class="composer-bar">
+            <button class="mode-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m13 3-8 12h7l-1 6 8-12h-7l1-6Z"/></svg>专业模式</button>
+            <div class="cmp-icons">
+              <button class="ic-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+              <button class="ic-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 7h3l2-2h6l2 2h3v12H4V7Z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
+              <button class="ic-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="m20 11-8.5 8.5a5 5 0 0 1-7-7L14 3a3.5 3.5 0 0 1 5 5l-9.5 9.5a2 2 0 0 1-3-3L15 5"/></svg></button>
+              <button class="send-btn"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg></button>
+            </div>
+          </div>
+        </div>
+        <p class="disclaimer">AI 回答仅供参考，请核对重要信息</p>
+      </section>
+    </div>
+  </div>
+</div>
+<div class="phone">
+  <span class="figma-label">02 · 对话页 / Chat</span>
+  <div class="screen">
+    <div class="chat-top" style="flex:none">
+      <button class="back-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m15 6-6 6 6 6"/></svg></button>
+      <div><div class="chat-title">法衡</div><div class="chat-status">在线 · 专业模式</div></div>
+    </div>
+    <div class="msgs scroll" data-msgs>
+      <div class="msg user"><div class="msg-orb"></div><div class="bubble">入职 3 个月公司一直没签劳动合同，最近还把我辞退了，我能要补偿吗？</div></div>
+      <div class="msg"><div class="msg-orb"></div><div class="bubble answer"><div class="answer">
+<p class="lead-p">你好，我是法衡。针对你的问题，先给你一份初步的法律分析：</p>
+<div class="verdict"><b>核心结论 · </b>用人单位自用工之日起超过一个月不满一年未订立书面劳动合同的，应向劳动者每月支付<b>二倍工资</b>；违法解除劳动关系的，应支付赔偿金。</div>
+<h4>你可以这样做</h4>
+<ol class="steps">
+<li>收集证据：工资流水、考勤记录、工作沟通记录、劳动合同或录用通知等；</li>
+<li>先与单位协商解决，并保留协商过程的记录；</li>
+<li>协商不成，向用工所在地劳动人事争议仲裁委员会申请<b>劳动仲裁</b>（一般免费）。</li>
+</ol>
+<div class="law-ref"><div class="lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2V5Z"/><path d="M8 7h7"/></svg>法律依据</div>《劳动合同法》第十条、第八十二条、第八十七条；《劳动争议调解仲裁法》第二十七条（仲裁时效一般为一年）。</div>
+<div class="follow">还需要我帮你 <b>生成维权文书</b> 或 <b>估算赔偿金额</b> 吗？可以继续提问。</div>
+</div></div></div>
+    </div>
+    <div class="chat-compose">
+      <div class="composer">
+        <input type="text" placeholder="回复法衡…" value="">
+        <div class="composer-bar">
+          <span style="font-size:var(--fs-xxs);color:var(--muted)">按住可语音输入</span>
+          <div class="cmp-icons">
+            <button class="ic-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 7h3l2-2h6l2 2h3v12H4V7Z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
+            <button class="ic-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="m20 11-8.5 8.5a5 5 0 0 1-7-7L14 3a3.5 3.5 0 0 1 5 5l-9.5 9.5a2 2 0 0 1-3-3L15 5"/></svg></button>
+            <button class="send-btn"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg></button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="chat-note">AI 回答仅供参考，请核对重要信息</p>
+  </div>
+</div>
+</div>
+</body>
+</html>
