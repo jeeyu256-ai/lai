@@ -1,0 +1,5 @@
+node_modules/
+tsconfig.tsbuildinfo
+.workbuddy/
+.DS_Store
+*.log
